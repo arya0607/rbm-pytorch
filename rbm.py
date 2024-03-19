@@ -68,7 +68,7 @@ class RBM(nn.Module):
         h_term = torch.sum(F.softplus(w_x_h), dim=1)
         return torch.mean(-h_term - v_term)
 
-    def forward(self, v):
+    def forward(self, v, v_mask = None, v_true = None):
         r"""Compute the real and generated examples.
 
         Args:
