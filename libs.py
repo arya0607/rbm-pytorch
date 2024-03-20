@@ -54,7 +54,7 @@ def train(model, train_loader, device, n_epochs=20, lr=0.001,k=None):
     
     return epoch_loss
 
-def test_for_inpaint(model, test_loader, device, random_values = True, k = 1000):
+def test_for_inpaint(model, test_loader, device, random_values = True, k = 1000, plot = False):
     r"""Test the model for inpainting.
     Top half of the image is masked and the model is asked to reconstruct it.
 
@@ -78,22 +78,42 @@ def test_for_inpaint(model, test_loader, device, random_values = True, k = 1000)
         # print(data.device, v_true.device, v_input.device, next(model.parameters()).device)
         batch_size,length = v_input.size()
         if random_values:
-            v_input[:, :length // 2].bernoulli()
+            v_input[:, :length // 2] = torch.rand((batch_size, length // 2)).to(device)
         else:
             v_input[:, :length // 2] = 0
         if v_mask is None or not batch_size == v_mask.size(0):
             v_mask = torch.ones((batch_size, length)).to(device)
             v_mask[:, :length // 2 ] = 0
-        _,v_gibbs = model(v_input, v_true=v_true, v_mask=v_mask, k=k)
+        _,v_gibbs = model(v_input, v_true=v_true, v_mask=v_mask, k=k,device=device)
         # compute accuracy
         v_pred = v_gibbs[:, :length // 2]
         accuracy = torch.eq(v_pred, v_true[:, :length // 2]).sum().item() / (batch_size * (length // 2))
         correct += torch.eq(v_pred, v_true[:, :length // 2]).sum().item()
         total += batch_size * (length // 2)
+        if plot:
+            ex = 5
+            fig, axs = plt.subplots(ex, 3)
+            for it in range(ex):
+                pred = v_gibbs[it]
+                pred = pred.view(28, 28)
+                axs[it, 0].imshow(pred.cpu().detach().numpy(), cmap='gray')
+
+                input_img = v_input[it]
+                input_img = input_img.view(28, 28)
+                axs[it, 1].imshow(input_img.cpu().detach().numpy(), cmap='gray')
+
+                img = v_true[it]
+                img = img.view(28, 28)
+                axs[it, 2].imshow(img.cpu().detach().numpy(), cmap='gray')
+
+            plt.show()
+            plt.close()
+            break
         # print('Batch Size:', batch_size, 'Accuracy: %.2f%%' % (accuracy * 100))
-        
+
     accuracy = correct / total
     print('correct:', correct, 'total:', total)
     print('Final Accuracy: %.2f%%' % (accuracy * 100))
     return accuracy
-        
+
+

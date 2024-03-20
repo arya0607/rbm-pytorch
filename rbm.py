@@ -68,7 +68,7 @@ class RBM(nn.Module):
         h_term = torch.sum(F.softplus(w_x_h), dim=1)
         return torch.mean(-h_term - v_term)
 
-    def forward(self, v, v_mask = None, v_true = None, k = None):
+    def forward(self, v, v_mask = None, v_true = None, k = None, device = 'cpu'):
         r"""Compute the real and generated examples.
 
         Args:
@@ -86,4 +86,7 @@ class RBM(nn.Module):
             if v_mask is not None and v_true is not None:
                 v_gibb = torch.where(v_mask == 1, v_true, v_gibb)
             h = self.visible_to_hidden(v_gibb)
+            if not device == 'cpu':
+                torch.cuda.empty_cache()
+                print('hii')
         return v, v_gibb
