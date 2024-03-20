@@ -68,7 +68,7 @@ class RBM(nn.Module):
         h_term = torch.sum(F.softplus(w_x_h), dim=1)
         return torch.mean(-h_term - v_term)
 
-    def forward(self, v, v_mask = None, v_true = None):
+    def forward(self, v, v_mask = None, v_true = None, k = None):
         r"""Compute the real and generated examples.
 
         Args:
@@ -78,8 +78,12 @@ class RBM(nn.Module):
             (Tensor, Tensor): The real and generagted variables.
 
         """
+        if k is None:
+            k = self.k
         h = self.visible_to_hidden(v)
-        for _ in range(self.k):
+        for _ in range(k):
             v_gibb = self.hidden_to_visible(h)
+            if v_mask is not None and v_true is not None:
+                v_gibb = torch.where(v_mask == 1, v_true, v_gibb)
             h = self.visible_to_hidden(v_gibb)
         return v, v_gibb
