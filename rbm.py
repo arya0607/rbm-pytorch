@@ -68,25 +68,32 @@ class RBM(nn.Module):
         h_term = torch.sum(F.softplus(w_x_h), dim=1)
         return torch.mean(-h_term - v_term)
 
-    def forward(self, v, v_mask = None, v_true = None, k = None, device = 'cpu'):
+    def forward(self, v, v_mask = None, v_true = None, k = None, device = 'cpu', log_every = None):
         r"""Compute the real and generated examples.
 
         Args:
             v (Tensor): The visible variable.
+            k is not None when we are generating the examples
 
         Returns:
             (Tensor, Tensor): The real and generagted variables.
 
         """
         if k is None:
+            # this is the case when we are training the model
             k = self.k
         h = self.visible_to_hidden(v)
-        for _ in range(k):
+        intermediate = []
+        if log_every is not None:
+            intermediate.append(v)
+        for i in range(k):
             v_gibb = self.hidden_to_visible(h)
             if v_mask is not None and v_true is not None:
                 v_gibb = torch.where(v_mask == 1, v_true, v_gibb)
             h = self.visible_to_hidden(v_gibb)
             if not device == 'cpu':
                 torch.cuda.empty_cache()
-                print('hii')
-        return v, v_gibb
+            if log_every is not None and (i + 1) % log_every == 0:
+                intermediate.append(v_gibb)
+            
+        return v, v_gibb, intermediate
